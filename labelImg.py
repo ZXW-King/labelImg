@@ -646,6 +646,7 @@ class MainWindow(QMainWindow, WindowMixin):
         self.fit_window = False
         # Add Chris
         self.difficult = False
+        self.image_null_path = None
 
         ## Fix the compatible issue for qt4 and qt5. Convert the QStringList to python list
         if settings.get(SETTING_RECENT_FILES):
@@ -1567,6 +1568,7 @@ class MainWindow(QMainWindow, WindowMixin):
                 self.errorMessage(u'Error opening file',
                                   u"<p>Make sure <i>%s</i> is a valid image file." % unicodeFilePath)
                 self.status("Error reading %s" % unicodeFilePath)
+                self.image_null_path = unicodeFilePath
                 return False
             self.status("Loaded %s" % os.path.basename(unicodeFilePath))
             if self.EqualizeHist:
@@ -1588,8 +1590,8 @@ class MainWindow(QMainWindow, WindowMixin):
             self.toggleActions(True)
 
             self.showBoundingBoxFromAnnotationFile(filePath)
-
-            self.setWindowTitle(__appname__ + ' ' + filePath)
+            currIndex = self.mImgList.index(self.filePath) + 1
+            self.setWindowTitle(__appname__ + ' ' + filePath + "——>" + str(currIndex) + "/" + str(len(self.mImgList)))
 
             # Default : select last item if there is at least one item
             if self.labelList.count():
@@ -1827,9 +1829,12 @@ class MainWindow(QMainWindow, WindowMixin):
             return
 
         if self.filePath is None:
-            return
-
-        currIndex = self.mImgList.index(self.filePath)
+            if self.image_null_path is None:
+                return
+            else:
+                currIndex = self.mImgList.index(self.image_null_path)
+        else:
+            currIndex = self.mImgList.index(self.filePath)
         if currIndex - 1 >= 0:
             filename = self.mImgList[currIndex - 1]
             if filename:
@@ -1854,7 +1859,13 @@ class MainWindow(QMainWindow, WindowMixin):
 
         filename = None
         if self.filePath is None:
-            filename = self.mImgList[0]
+            if self.image_null_path is None:
+                filename = self.mImgList[0]
+            else:
+                currIndex = self.mImgList.index(self.image_null_path)
+                if currIndex + 1 < len(self.mImgList):
+                    filename = self.mImgList[currIndex + 1]
+                    self.image_null_path = None
         else:
             currIndex = self.mImgList.index(self.filePath)
             if currIndex + 1 < len(self.mImgList):
@@ -2020,16 +2031,20 @@ class MainWindow(QMainWindow, WindowMixin):
 
     def autoThreadFunc(self):
         if self.fullyAutoMode:
-            next_id = self.mImgList.index(self.filePath) + 1
-            tlen = len(self.mImgList)
-            print("processing {} , total {} |{}{}|\r".format(next_id, tlen, "*"*int(float(next_id/tlen)*50),
-                                                                                    " "*int(float(1-next_id/tlen)*50)))
-            if next_id <= tlen:
-                self.auto()
+            if self.filePath is not None:
+                next_id = self.mImgList.index(self.filePath) + 1
+                tlen = len(self.mImgList)
+                print("processing {} , total {} |{}{}|\r".format(next_id, tlen, "*"*int(float(next_id/tlen)*50),
+                                                                                        " "*int(float(1-next_id/tlen)*50)))
+                if next_id <= tlen:
+                    self.auto()
+                    self.openNextImg()
+                if next_id == tlen:
+                    self.timer4autolabel.stop()
+                    autoLabel.setText("Fully autoLabel")
+            else:
+                # self.auto()
                 self.openNextImg()
-            if next_id == tlen:
-                self.timer4autolabel.stop()
-                autoLabel.setText("Fully autoLabel")
         else:
             self.timer4autolabel.stop()
 

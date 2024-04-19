@@ -1,4 +1,6 @@
+dirtydry
 dirtyliquid
+solid
 person
 escalator
 escalator_handrails
